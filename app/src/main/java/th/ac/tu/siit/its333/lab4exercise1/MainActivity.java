@@ -17,10 +17,12 @@ public class MainActivity extends ActionBarActivity {
 
     CourseDBHelper helper;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        helper = new CourseDBHelper(this);   //connect
 
     }
 
@@ -29,6 +31,20 @@ public class MainActivity extends ActionBarActivity {
         super.onResume();
 
         // This method is called when this activity is put foreground.
+        SQLiteDatabase db = helper.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT sum(credit * value) as X, sum(credit) as Y FROM course", null);
+        cursor.moveToFirst(); // get the first row
+        double gradepoint = cursor.getDouble(cursor.getColumnIndex("X"));  //maybe we dont know which column to get from, so specify the column name
+        double credit = cursor.getDouble(1);
+
+        TextView v = (TextView)findViewById(R.id.tvGP);
+        v.setText(String.format("%.1f", gradepoint));       //change from double to string with a format .0
+
+        TextView v2 = (TextView)findViewById(R.id.tvCR);
+        v2.setText(String.format("%.0f",credit));
+
+        TextView v3 = (TextView)findViewById(R.id.tvGPA);
+        v3.setText(String.format("%.2f", (gradepoint / credit)));
 
     }
 
@@ -48,7 +64,9 @@ public class MainActivity extends ActionBarActivity {
                 break;
 
             case R.id.btReset:
-
+                SQLiteDatabase db = helper.getWritableDatabase();
+                int n_rows = db.delete("course", "", null);   //delete all dont have to specify
+                onResume();
                 break;
         }
     }
@@ -61,10 +79,19 @@ public class MainActivity extends ActionBarActivity {
                 int credit = data.getIntExtra("credit", 0);
                 String grade = data.getStringExtra("grade");
 
+                SQLiteDatabase db = helper.getWritableDatabase();  //get so can write into database
+                ContentValues r = new ContentValues();
+                r.put("code", code);
+                r.put("credit", credit);
+                r.put("grade", grade);
+                r.put("value", gradeToValue(grade));
+                long new_id = db.insert("course", null, r);
+
+                onResume();
             }
         }
 
-        Log.d("course", "onActivityResult");
+        Log.d("course", "onActivityResult"); //show in logcat
     }
 
     double gradeToValue(String g) {
